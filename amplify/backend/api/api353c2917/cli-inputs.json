@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "paths": {
+    "/api/getRecordsRDS1": {
+      "name": "/api/getRecordsRDS1",
+      "lambdaFunction": "getRecordsRDS1",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/api/getRecordsRDS2": {
+      "name": "/api/getRecordsRDS2",
+      "lambdaFunction": "getRecordsRDS2",
+      "permissions": {
+        "setting": "open"
+      }
+    },
+    "/api/createSchema": {
+      "name": "/api/createSchema",
+      "lambdaFunction": "createSchema",
+      "permissions": {
+        "setting": "open"
+      }
+    }
+  }
+}
