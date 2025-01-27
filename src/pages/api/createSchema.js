@@ -1,5 +1,5 @@
 // pages/api/createSchema.js
-import { db2Client, connectDB } from '../../lib/db'; // Adjust import as per your DB connection setup
+import { connectDB2 } from '../../lib/db'; // Adjust import as per your DB connection setup
 
 export default async function handler(req, res) {
   // Ensure this only runs on POST request
@@ -16,18 +16,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure DB is connected
-    if (!db2Client._connected) {
-      await connectDB(); // Connect to DB if not connected
-    }
+    const pool = await connectDB2();
 
     // Create the schema dynamically based on the provided name
     const query = `CREATE SCHEMA IF NOT EXISTS ${schemaName}`;
     const query1 = `GRANT USAGE, CREATE ON SCHEMA  ${schemaName} to workshopq1;`;
-    const result = await db2Client.query(query);
-    const result2 = await db2Client.query(query1);
+    const result = await pool.query(query);
+    await pool.query(query1);
+
     // Return success message or result
     res.status(200).json({ message: `Schema '${schemaName}' created successfully`, result });
+
   } catch (error) {
     console.error('Error creating schema:', error);
     res.status(500).json({ error: 'Failed to create schema' });

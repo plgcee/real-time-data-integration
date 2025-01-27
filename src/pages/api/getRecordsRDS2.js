@@ -1,5 +1,7 @@
 // pages/api/getRecordsRDS2.js
-import { db2Client, db1Client } from '../../lib/db';
+import { connectDB2 } from '../../lib/db';
+
+let db2Pool;
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -9,10 +11,11 @@ export default async function handler(req, res) {
     if (!schemaName) {
         return res.status(400).json({ error: 'Schema name is required' });
     }
+
   try {
-    if (!db1Client._connected) {
-        await connectDB(); // Ensure DB is connected only if not already
-      }
+    if (!db2Pool) {
+      db2Pool = await connectDB2();
+    }
     const existsQuery = `
       SELECT EXISTS (
         SELECT 1
@@ -21,9 +24,10 @@ export default async function handler(req, res) {
         AND table_name = $2
       ) AS table_exists;
     `;
-    const result = await db2Client.query(existsQuery, [schemaName, "db_public_products"]);
+    const pool = await db2Pool.connect();
+    const result = await pool.query(existsQuery, [schemaName, "db_public_products"]);
     if (result.rows[0].table_exists) {
-        const result2 = await db2Client.query(`SELECT id, name, quantity, price FROM ${schemaName}.db_public_products`);
+        const result2 = await pool.query(`SELECT id, name, quantity, price FROM ${schemaName}.db_public_products`);
         return res.status(200).json(result2.rows);
       } else {
         return res.status(200).json([]);
