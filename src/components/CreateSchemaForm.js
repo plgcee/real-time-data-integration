@@ -7,23 +7,18 @@ export default function CreateSchemaModal() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // On modal open, try to load the schema name from localStorage
-  const loadSchemaFromLocalStorage = () => {
+  // Load schema from localStorage when the component mounts
+  useEffect(() => {
     const savedSchemaName = localStorage.getItem('schemaName');
     if (savedSchemaName) {
       setSchemaName(savedSchemaName);
     }
-  };
-
-  // Call loadSchemaFromLocalStorage when the component mounts
-  useEffect(() => {
-    loadSchemaFromLocalStorage();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!schemaName) {
+    if (!schemaName.trim()) {
       setError('Schema name is required');
       return;
     }
@@ -45,7 +40,7 @@ export default function CreateSchemaModal() {
 
       if (res.ok) {
         setMessage(result.message);
-        localStorage.setItem('schemaName', schemaName); // Store schema name in localStorage
+        localStorage.setItem('schemaName', schemaName);
         setSchemaName('');
         setShowModal(false);
       } else {
@@ -61,9 +56,10 @@ export default function CreateSchemaModal() {
 
   return (
     <div>
+      {/* Open modal button */}
       <button
         onClick={() => setShowModal(true)}
-        className="m-5 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        className="m-5 px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition duration-200"
       >
         Create Schema
       </button>
@@ -77,31 +73,37 @@ export default function CreateSchemaModal() {
             className="bg-white p-6 rounded-lg shadow-lg w-full sm:w-96"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4">Create Schema</h2>
+            {/* Modal Title (Fixed Visibility) */}
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Create Schema</h2>
 
             <form onSubmit={handleSubmit}>
+              {/* Input Field (Improved Contrast) */}
               <input
                 type="text"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
                 placeholder="Enter schema name"
-                className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full px-4 py-2 border border-gray-400 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
+
+              {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-200"
                 disabled={loading}
               >
                 {loading ? 'Creating...' : 'Create Schema'}
               </button>
             </form>
 
-            {error && <p className="text-red-500 mt-2">{error}</p>}
-            {message && <p className="text-green-500 mt-2">{message}</p>}
+            {/* Error & Success Messages */}
+            {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
+            {message && <p className="text-green-500 mt-2 text-sm">{message}</p>}
 
+            {/* Cancel Button */}
             <button
               onClick={() => setShowModal(false)}
-              className="mt-4 w-full px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
+              className="mt-3 w-full px-4 py-2 bg-gray-300 text-gray-900 font-semibold rounded-md hover:bg-gray-400 transition duration-200"
             >
               Cancel
             </button>

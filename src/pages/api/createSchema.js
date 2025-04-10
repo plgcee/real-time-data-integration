@@ -1,6 +1,9 @@
 // pages/api/createSchema.js
-import { connectDB2 } from '../../lib/db'; // Adjust import as per your DB connection setup
+import { queryRDS2 } from '../../lib/db';
 
+/**
+ * API endpoint to create a new schema in the target database
+ */
 export default async function handler(req, res) {
   // Ensure this only runs on POST request
   if (req.method !== 'POST') {
@@ -15,20 +18,57 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Schema name is required' });
   }
 
+  // Validate schema name to prevent SQL injection
+  if (!/^[a-zA-Z0-9_]+$/.test(schemaName)) {
+    return res.status(400).json({ error: 'Invalid schema name. Use only letters, numbers, and underscores.' });
+  }
+
   try {
-    const pool = await connectDB2();
+    // Check if schema already exists
+    const checkSchemaQuery = `SELECT 1 FROM information_schema.schemata WHERE schema_name = $1`;
+    const existingSchema = await queryRDS2(checkSchemaQuery, [schemaName]);
 
-    // Create the schema dynamically based on the provided name
-    const query = `CREATE SCHEMA IF NOT EXISTS ${schemaName}`;
-    const query1 = `GRANT USAGE, CREATE ON SCHEMA  ${schemaName} to workshopq1;`;
-    const result = await pool.query(query);
-    await pool.query(query1);
+    if (existingSchema.rowCount === 0) {
+      // Create the schema
+      const createSchemaQuery = `CREATE SCHEMA IF NOT EXISTS "${schemaName}"`;
+      await queryRDS2(createSchemaQuery);
+      console.log(`Schema '${schemaName}' created successfully.`);
+    } else {
+      console.log(`Schema '${schemaName}' already exists.`);
+    }
 
-    // Return success message or result
-    res.status(200).json({ message: `Schema '${schemaName}' created successfully`, result });
+    // Grant permissions to the workshop user
+    const grantQuery = `GRANT USAGE, CREATE ON SCHEMA "${schemaName}" TO workshopq1`;
+    await queryRDS2(grantQuery);
+    console.log(`Permissions granted on schema '${schemaName}'.`);
+
+    // Create products table in the new schema
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS "${schemaName}".products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        quantity INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    await queryRDS2(createTableQuery);
+    console.log(`Table 'products' created in schema '${schemaName}'.`);
+
+    // Return success message
+    res.status(200).json({ 
+      success: true,
+      message: `Schema '${schemaName}' created successfully`,
+      schemaName: schemaName
+    });
 
   } catch (error) {
     console.error('Error creating schema:', error);
-    res.status(500).json({ error: 'Failed to create schema' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to create schema',
+      message: error.message 
+    });
   }
 }

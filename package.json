@@ -7,22 +7,28 @@
     "build": "next build",
     "start": "next start",
     "export": "next export",
-    "lint": "next lint"
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
     "axios": "^1.7.9",
-    "fs": "^0.0.1-security",
+    "clsx": "^2.1.1",
+    "dotenv": "^16.4.7",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "next": "15.1.6",
     "pg": "^8.13.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.1.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
-    "constructs": "^10.4.2",
-    "esbuild": "^0.24.2",
-    "postcss": "^8",
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.0.0",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.29.0"
   }
 }

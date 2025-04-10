@@ -1,70 +1,104 @@
-const { Pool } = require('pg');
+import { Pool } from 'pg';
 
-// Configure the RDS connections\
-let db1Pool;
-let db2Pool;
+// Connection pools
+let poolRDS1 = null;
+let poolRDS2 = null;
 
-// Connect to databases RDS1
-const connectDB1 = async (databaseName) => {
+// Idle timeout in milliseconds (5 minutes)
+const IDLE_TIMEOUT = 5 * 60 * 1000;
 
-  const databaseToConnect = databaseName || process.env.RDS1_DATABASE;
+// Last activity timestamp
+let lastActivityTime = Date.now();
 
-  let dbPool = db1Pool
+// Function to update last activity time
+export const updateLastActivity = () => {
+  lastActivityTime = Date.now();
+};
 
-  // If the pool doesn't exist or the database is different, create a new pool
-  if (!dbPool || dbPool.database !== databaseToConnect) {
-    dbPool = new Pool({
+// Function to check and close idle connections
+export const checkAndCloseIdleConnections = () => {
+  const currentTime = Date.now();
+  if (currentTime - lastActivityTime > IDLE_TIMEOUT) {
+    if (poolRDS1) {
+      poolRDS1.end();
+      poolRDS1 = null;
+    }
+    if (poolRDS2) {
+      poolRDS2.end();
+      poolRDS2 = null;
+    }
+    console.log('Closed idle database connections');
+  }
+};
+
+// Function to get RDS1 connection pool
+const getPoolRDS1 = (databaseName) => {
+  if (!poolRDS1) {
+    poolRDS1 = new Pool({
       host: process.env.RDS1_HOST,
-      port: process.env.RDS1_PORT || 5432,
+      port: process.env.RDS1_PORT,
       user: process.env.RDS1_USER,
       password: process.env.RDS1_PASSWORD,
-      database: databaseToConnect,
+      database: databaseName || process.env.RDS1_DATABASE || 'postgres',
       ssl: {
-        rejectUnauthorized: false,
-      },
+        rejectUnauthorized: false
+      }
     });
   }
+  return poolRDS1;
+};
 
-  try {
-    const client = await dbPool.connect();
-    console.log('Connected to RDS1');
-    client.release();
-  } catch (err) {
-    console.error('Error connecting to databases:', err);
-    throw new Error('Could not connect to the database');
+// Function to get RDS2 connection pool
+const getPoolRDS2 = () => {
+  if (!poolRDS2) {
+    poolRDS2 = new Pool({
+      host: process.env.RDS2_HOST,
+      port: process.env.RDS2_PORT,
+      user: process.env.RDS2_USER,
+      password: process.env.RDS2_PASSWORD,
+      database: process.env.RDS2_DATABASE,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    });
   }
-  return dbPool;
+  return poolRDS2;
 };
 
-// Connect to databases RDS1
-const connectDB2 = async () => {
-  if (db2Pool) return db2Pool;
-  db2Pool = new Pool({
-    host: process.env.RDS2_HOST,
-    port: process.env.RDS2_PORT || 5432,
-    user: process.env.RDS2_USER,
-    password: process.env.RDS2_PASSWORD,
-    database: process.env.RDS2_DATABASE,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-  });
+// Function to execute query on RDS1
+export const queryRDS1 = async (text, params = [], databaseName) => {
+  updateLastActivity();
+  const pool = getPoolRDS1(databaseName);
   try {
-    const client = await db2Pool.connect();
-    console.log('Connected to RDS2');
-    client.release();
-  } catch (err) {
-    console.error('Error connecting to databases:', err);
-    throw new Error('Could not connect to the database');
+    const result = await pool.query(text, params);
+    return result;
+  } catch (error) {
+    console.error('Error executing query on RDS1:', error);
+    throw error;
   }
-  return db2Pool;
 };
 
-
-// Close connections
-const closeConnections = async () => {
-  await db1Pool.end();
-  await db2Pool.end();
+// Function to execute query on RDS2
+export const queryRDS2 = async (text, params = [], schemaName = 'public') => {
+  updateLastActivity();
+  const pool = getPoolRDS2();
+  try {
+    // Set the search path for this query
+    await pool.query(`SET search_path TO ${schemaName}`);
+    const result = await pool.query(text, params);
+    return result;
+  } catch (error) {
+    console.error('Error executing query on RDS2:', error);
+    throw error;
+  }
 };
 
-module.exports = { connectDB1, connectDB2, closeConnections };
+// Set up periodic connection cleanup
+setInterval(checkAndCloseIdleConnections, IDLE_TIMEOUT);
+
+// Clean up connections on process exit
+process.on('SIGINT', () => {
+  if (poolRDS1) poolRDS1.end();
+  if (poolRDS2) poolRDS2.end();
+  process.exit();
+});
