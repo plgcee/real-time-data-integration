@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         SELECT 1 
         FROM information_schema.tables 
         WHERE table_schema = $1 
-        AND table_name = 'products'
+        AND table_name = 'db_public_products'
       ) AS table_exists;
     `;
     
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     // Fetch records from the products table in the specified schema
     const result = await queryRDS2(
-      `SELECT id, name, price, quantity FROM "${schemaToUse}".products`,
+      `SELECT id, name, price, quantity FROM "${schemaToUse}".db_public_products`,
       []
     );
 
