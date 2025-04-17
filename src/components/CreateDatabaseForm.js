@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function CreateDatabaseModal() {
+export default function CreateDatabaseModal({ onDatabaseCreated }) {
   const [showModal, setShowModal] = useState(false);
   const [databaseName, setDatabaseName] = useState('');
   const [error, setError] = useState('');
@@ -37,6 +37,9 @@ export default function CreateDatabaseModal() {
       if (res.ok) {
         setMessage(result.message || 'Database created successfully!');
         localStorage.setItem('databaseName', databaseName);
+        if (onDatabaseCreated) {
+          onDatabaseCreated(databaseName);
+        }
         setDatabaseName('');
         setTimeout(() => setShowModal(false), 1500); // Auto-close on success
       } else {

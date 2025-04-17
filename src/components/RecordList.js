@@ -2,111 +2,95 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { updateLastActivity } from '../lib/db';
 
+// Helper function to safely access localStorage
+const getStoredDatabaseName = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('databaseName') || 'postgres';
+  }
+  return 'postgres';
+};
+
+// Helper function to safely access localStorage for schema name
+const getStoredSchemaName = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('schemaName') || 'public';
+  }
+  return 'public';
+};
+
 const RecordList = () => {
   const [recordsRDS1, setRecordsRDS1] = useState([]);
   const [recordsRDS2, setRecordsRDS2] = useState([]);
-  const [schemaName, setSchemaName] = useState('public');
-  const [databaseName, setDatabaseName] = useState('postgres');
+  const [schemaName, setSchemaName] = useState(getStoredSchemaName());
+  const [databaseName, setDatabaseName] = useState(getStoredDatabaseName());
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // Error state
+  const [error, setError] = useState(null);
 
   // State for managing modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        updateLastActivity(); // Update activity timestamp
-
-        // Fetch database info from localStorage
-        const savedSchemaName = localStorage.getItem('schemaName');
-        const savedDatabaseName = localStorage.getItem('databaseName');
-        if (savedSchemaName) setSchemaName(savedSchemaName);
-        if (savedDatabaseName) setDatabaseName(savedDatabaseName);
-
-        // Fetch records from RDS1
-        const response1 = await axios.get(`/api/getRecordsRDS1?databaseName=${encodeURIComponent(databaseName)}`);
-        // Check if the response has the expected structure
-        if (response1.data && response1.data.success) {
-          setRecordsRDS1(response1.data.data || []);
-        } else {
-          setRecordsRDS1([]);
-          console.warn('Unexpected response format from RDS1:', response1.data);
-        }
-
-        // Fetch records from RDS2
-        const response2 = await axios.get(`/api/getRecordsRDS2?schemaName=${encodeURIComponent(schemaName)}`);
-        // Check if the response has the expected structure
-        if (response2.data && response2.data.success) {
-          setRecordsRDS2(response2.data.data || []);
-        } else {
-          setRecordsRDS2([]);
-          console.warn('Unexpected response format from RDS2:', response2.data);
-        }
-      } catch (err) {
-        console.error('Error fetching records:', err);
-        setError(err.response?.data || { message: err.message });
-        setRecordsRDS1([]);
-        setRecordsRDS2([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [schemaName, databaseName]);
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    setError(null);
-    updateLastActivity(); // Update activity timestamp
-
+  const fetchRecords = async (dbName = null, schema = null) => {
     try {
-      // Update state from localStorage with null checks
-      const savedSchemaName = localStorage.getItem('schemaName');
-      const savedDatabaseName = localStorage.getItem('databaseName');
-      
-      // Only update state if values exist in localStorage
-      if (savedSchemaName) {
-        setSchemaName(savedSchemaName);
-      }
-      
-      if (savedDatabaseName) {
-        setDatabaseName(savedDatabaseName);
-      }
+      setLoading(true);
+      setError(null);
+      updateLastActivity();
 
-      // Use the updated state values for API calls
-      const dbToUse = savedDatabaseName || databaseName;
-      const schemaToUse = savedSchemaName || schemaName;
+      // Get the database name and schema to use
+      const dbToUse = dbName || getStoredDatabaseName();
+      const schemaToUse = schema || getStoredSchemaName();
 
+      console.log('Fetching records with:', { dbToUse, schemaToUse });
+
+      // Fetch records from RDS1
       const response1 = await axios.get(`/api/getRecordsRDS1?databaseName=${encodeURIComponent(dbToUse)}`);
-      // Check if the response has the expected structure
+      console.log('RDS1 Response:', response1.data);
+      
       if (response1.data && response1.data.success) {
         setRecordsRDS1(response1.data.data || []);
       } else {
+        console.error('RDS1 Error:', response1.data);
         setRecordsRDS1([]);
-        console.warn('Unexpected response format from RDS1:', response1.data);
       }
 
+      // Fetch records from RDS2
       const response2 = await axios.get(`/api/getRecordsRDS2?schemaName=${encodeURIComponent(schemaToUse)}`);
-      // Check if the response has the expected structure
+      console.log('RDS2 Response:', response2.data);
+      
       if (response2.data && response2.data.success) {
         setRecordsRDS2(response2.data.data || []);
       } else {
+        console.error('RDS2 Error:', response2.data);
         setRecordsRDS2([]);
-        console.warn('Unexpected response format from RDS2:', response2.data);
       }
     } catch (err) {
-      console.error('Error refreshing records:', err);
+      console.error('Error fetching records:', err);
       setError(err.response?.data || { message: err.message });
       setRecordsRDS1([]);
       setRecordsRDS2([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
+  const handleRefresh = async () => {
+    // Get the latest values from localStorage
+    const latestDbName = getStoredDatabaseName();
+    const latestSchemaName = getStoredSchemaName();
+    
+    console.log('Refreshing with:', { latestDbName, latestSchemaName });
+    
+    // Update states
+    setDatabaseName(latestDbName);
+    setSchemaName(latestSchemaName);
+    
+    // Fetch records with the latest values
+    await fetchRecords(latestDbName, latestSchemaName);
   };
 
   const handleEditClick = (record) => {
@@ -156,30 +140,29 @@ const RecordList = () => {
 
   return (
     <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Database Records</h1>
+        <button
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+        >
+          Refresh Records
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error.message}</span>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600"></div>
         </div>
-      ) : error ? (
-        <div className="text-red-600 bg-red-100 p-4 rounded-md">
-          <h2 className="text-lg font-semibold">Error: {error.message || 'Unknown Error'}</h2>
-          {error.stack && <pre className="text-sm mt-2 whitespace-pre-wrap">{error.stack}</pre>}
-        </div>
       ) : (
         <>
-          {/* Header & Refresh Button */}
-<div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 overflow-hidden">
-  <h1 className="text-white text-xl font-semibold whitespace-nowrap">Record Management</h1>
-  <button
-    onClick={handleRefresh}
-    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium rounded-lg shadow-md flex items-center gap-2 transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-    aria-label="Refresh Records"
-  >
-    🔄 <span>Refresh Records</span>
-  </button>
-</div>
-
-  
           {/* Tables */}
           <div className="flex flex-col lg:flex-row gap-6">
             {/* RDS1 */}
@@ -320,7 +303,6 @@ const RecordList = () => {
       )}
     </div>
   );
-  
 };
 
 export default RecordList;

@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 // Connection pools
 let poolRDS1 = null;
 let poolRDS2 = null;
+let currentDatabaseName = null;
 
 // Idle timeout in milliseconds (5 minutes)
 const IDLE_TIMEOUT = 5 * 60 * 1000;
@@ -22,6 +23,7 @@ export const checkAndCloseIdleConnections = () => {
     if (poolRDS1) {
       poolRDS1.end();
       poolRDS1 = null;
+      currentDatabaseName = null;
     }
     if (poolRDS2) {
       poolRDS2.end();
@@ -33,7 +35,11 @@ export const checkAndCloseIdleConnections = () => {
 
 // Function to get RDS1 connection pool
 const getPoolRDS1 = (databaseName) => {
-  if (!poolRDS1) {
+  // If database name has changed or pool doesn't exist, create new pool
+  if (!poolRDS1 || currentDatabaseName !== databaseName) {
+    if (poolRDS1) {
+      poolRDS1.end();
+    }
     poolRDS1 = new Pool({
       host: process.env.RDS1_HOST,
       port: process.env.RDS1_PORT,
@@ -44,6 +50,8 @@ const getPoolRDS1 = (databaseName) => {
         rejectUnauthorized: false
       }
     });
+    currentDatabaseName = databaseName;
+    console.log(`Created new connection pool for database: ${databaseName}`);
   }
   return poolRDS1;
 };

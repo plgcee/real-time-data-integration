@@ -41,21 +41,7 @@ export default async function handler(req, res) {
     const grantQuery = `GRANT USAGE, CREATE ON SCHEMA "${schemaName}" TO workshopq1`;
     await queryRDS2(grantQuery);
     console.log(`Permissions granted on schema '${schemaName}'.`);
-
-    // Create products table in the new schema
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS "${schemaName}".products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        quantity INTEGER NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-    await queryRDS2(createTableQuery);
-    console.log(`Table 'products' created in schema '${schemaName}'.`);
-
+    
     // Return success message
     res.status(200).json({ 
       success: true,
