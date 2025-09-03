@@ -59,6 +59,8 @@ export default async function handler(req, res) {
     await queryRDS1(query);
     var query = `GRANT SELECT ON ALL TABLES IN SCHEMA public TO cdc_user`;
     await queryRDS1(query);
+    var query = `GRANT CREATE ON SCHEMA public TO cdc_user;`;
+    await queryRDS1(query);
     
 
     // Step 4: Set up replication identity
