@@ -1,6 +1,5 @@
 // pages/api/createSchema.js
 import { queryRDS1 } from '../../lib/db';
-import { Pool } from 'pg';
 
 /**
  * API endpoint to create a new database and initialize it with a products table
@@ -35,6 +34,9 @@ export default async function handler(req, res) {
       // So we need to be careful with the databaseName validation
       const createDbQuery = `CREATE DATABASE "${databaseName}"`;
       await queryRDS1(createDbQuery);
+      var query = `GRANT CONNECT ON DATABASE ${databaseName} TO cdc_user`;
+      await queryRDS1(query);
+
       console.log(`Database '${databaseName}' created successfully.`);
     } else {
       console.log(`Database '${databaseName}' already exists.`);
@@ -42,7 +44,7 @@ export default async function handler(req, res) {
 
     // Step 3: Connect to the new database and create the table
     const tableQuery = `
-      CREATE TABLE IF NOT EXISTS products (
+      CREATE TABLE IF NOT EXISTS public.products (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         price DECIMAL(10,2) NOT NULL,
@@ -51,41 +53,27 @@ export default async function handler(req, res) {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;
+    await queryRDS1(tableQuery, [], databaseName);
+    console.log('Table created successfully in the new database.');
+    var query = `GRANT USAGE ON SCHEMA public TO cdc_user`;
+    await queryRDS1(query);
+    var query = `GRANT SELECT ON ALL TABLES IN SCHEMA public TO cdc_user`;
+    await queryRDS1(query);
     
-    // Create a new connection to the specific database
-    const pool = new Pool({
-      host: process.env.RDS1_HOST,
-      port: process.env.RDS1_PORT,
-      user: process.env.RDS1_USER,
-      password: process.env.RDS1_PASSWORD,
-      database: databaseName,
-      ssl: {
-        rejectUnauthorized: false
-      }
+
+    // Step 4: Set up replication identity
+    const updateReplicaQuery = `
+      ALTER TABLE public.products REPLICA IDENTITY FULL;
+    `;
+    await queryRDS1(updateReplicaQuery, [], databaseName);
+    console.log('Replication identity set up successfully.');
+
+    // Return success message
+    res.status(200).json({ 
+      success: true,
+      message: `Database '${databaseName}' created and table 'products' added successfully.`,
+      databaseName: databaseName
     });
-
-    try {
-      // Execute table creation in the new database
-      await pool.query(tableQuery);
-      console.log('Table created successfully in the new database.');
-
-      // Set up replication identity
-      const updateReplicaQuery = `
-        ALTER TABLE products REPLICA IDENTITY FULL;
-      `;
-      await pool.query(updateReplicaQuery);
-      console.log('Replication identity set up successfully.');
-
-      // Return success message
-      res.status(200).json({ 
-        success: true,
-        message: `Database '${databaseName}' created and table 'products' added successfully.`,
-        databaseName: databaseName
-      });
-    } finally {
-      // Always close the connection
-      await pool.end();
-    }
     
   } catch (error) {
     console.error('Error creating Database / Table:', error);
