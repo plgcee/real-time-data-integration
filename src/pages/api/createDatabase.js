@@ -34,9 +34,6 @@ export default async function handler(req, res) {
       // So we need to be careful with the databaseName validation
       const createDbQuery = `CREATE DATABASE "${databaseName}"`;
       await queryRDS1(createDbQuery);
-      var query = `GRANT CONNECT ON DATABASE ${databaseName} TO cdc_user`;
-      await queryRDS1(query);
-
       console.log(`Database '${databaseName}' created successfully.`);
     } else {
       console.log(`Database '${databaseName}' already exists.`);
@@ -55,13 +52,6 @@ export default async function handler(req, res) {
     `;
     await queryRDS1(tableQuery, [], databaseName);
     console.log('Table created successfully in the new database.');
-    var query = `GRANT USAGE ON SCHEMA public TO cdc_user`;
-    await queryRDS1(query);
-    var query = `GRANT SELECT ON ALL TABLES IN SCHEMA public TO cdc_user`;
-    await queryRDS1(query);
-    var query = `GRANT CREATE ON SCHEMA public TO cdc_user;`;
-    await queryRDS1(query);
-    
 
     // Step 4: Set up replication identity
     const updateReplicaQuery = `
