@@ -4,8 +4,8 @@ export default function InsertRecordsModal() {
   const [showModal, setShowModal] = useState(false);
   const [products] = useState([
     { id: 1, name: 'Apple iPhone 16 Pro', price: 600, quantity: 100 },
-    { id: 2, name: 'Samsung S25 Ultra 5G', price: 1200, quantity: 200 },
-    { id: 3, name: 'Google Pixel 9 Pro Fold', price: 500, quantity: 150 },
+    { id: 2, name: 'Samsung S25 Ultra 5G', price: 700, quantity: 200 },
+    { id: 3, name: 'Google Pixel 9 Pro Fold', price: 699, quantity: 150 },
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
