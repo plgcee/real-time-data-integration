@@ -3,9 +3,9 @@ import { useState } from 'react';
 export default function InsertRecordsModal() {
   const [showModal, setShowModal] = useState(false);
   const [products] = useState([
-    { id: 1, name: 'Apple iPhone 16 Pro', price: 79900, quantity: 100 },
-    { id: 2, name: 'Samsung S25 Ultra 5G', price: 153900, quantity: 200 },
-    { id: 3, name: 'Google Pixel 9 Pro Fold', price: 109900, quantity: 150 },
+    { id: 1, name: 'Apple iPhone 16 Pro', price: 600, quantity: 100 },
+    { id: 2, name: 'Samsung S25 Ultra 5G', price: 700, quantity: 200 },
+    { id: 3, name: 'Google Pixel 9 Pro Fold', price: 699, quantity: 150 },
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { updateLastActivity } from '../lib/db';
 
 // Helper function to safely access localStorage
 const getStoredDatabaseName = () => {
@@ -34,7 +33,6 @@ const RecordList = () => {
     try {
       setLoading(true);
       setError(null);
-      updateLastActivity();
 
       // Get the database name and schema to use
       const dbToUse = dbName || getStoredDatabaseName();
@@ -105,7 +103,6 @@ const RecordList = () => {
 
     try {
       setLoading(true);
-      updateLastActivity(); // Update activity timestamp
       const savedDatabaseName = localStorage.getItem('databaseName');
       const response = await axios.post('/api/editRecord', {
         ...currentRecord,

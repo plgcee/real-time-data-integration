@@ -22,6 +22,15 @@ const nextConfig = {
         tls: false,
         dns: false,
         'pg-native': false,
+        'pg': false,
+        'node:process': false,
+        'node:util': false,
+        'node:stream': false,
+        'node:buffer': false,
+        'node:crypto': false,
+        'node:events': false,
+        'node:path': false,
+        'node:os': false,
       };
     }
     
